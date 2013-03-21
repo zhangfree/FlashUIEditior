@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:WindowedApplication xmlns:mx="http://www.adobe.com/2006/mxml" 
+						layout="absolute"
+						width="400" height="110"
+						horizontalScrollPolicy="off" verticalScrollPolicy="off"
+						showStatusBar="false" fontSize="12"
+						creationComplete="init()">
+	<mx:Style source="style/style.css"/>
+	<mx:Script>
+		<![CDATA[
+			import flash.utils.getQualifiedClassName;
+			
+			import mx.controls.Alert;
+			import mx.events.FlexEvent;
+			
+			//air2swf
+			private var air2swfConn:LocalConnection;
+			
+			//swf2air
+			private var swf2airConn:LocalConnection;
+			
+			//当前选择的对象
+			private var curChosedDisObject:DisplayObject;
+			
+			//是否为编辑模式
+			private var _isEditiorModel:Boolean;
+			
+			public function get isEditiorModel():Boolean
+			{
+				return _isEditiorModel;
+			}
+			
+			public function set isEditiorModel(value:Boolean):void
+			{
+				if(_isEditiorModel == value)
+					return;
+				_isEditiorModel = value;
+				if(value == true)
+					_onAndOffBtn.label = "OFF";
+				else
+					_onAndOffBtn.label = "ON";					
+			}
+			
+			private var _isDragModel:Boolean;
+			
+			public function get isDragModel():Boolean
+			{
+				return _isDragModel;
+			}
+			
+			public function set isDragModel(value:Boolean):void
+			{
+				if(_isDragModel == value)
+					return;
+				_isDragModel = value;
+				if(value == true)
+					_dragBtn.label = "unDrag";
+				else
+					_dragBtn.label = "drag";
+			}
+
+			//初始化
+			private function init():void
+			{
+				//air2swf
+				air2swfConn = new LocalConnection();
+				air2swfConn.addEventListener(StatusEvent.STATUS,onLocalConnStatusHandler);
+				//swf2air
+				swf2airConn = new LocalConnection();
+				swf2airConn.allowDomain("*");
+				swf2airConn.client = this;
+				try
+				{
+					swf2airConn.connect("_zhangji_2");
+				}
+				catch(err:ArgumentError)
+				{
+					Alert.show("this connectionName is being used by another SWF!");
+				}
+			}
+			
+			//本地联接状态返回
+			private function onLocalConnStatusHandler(evt:StatusEvent):void
+			{
+			}
+			
+			//输入框回车
+			protected function onInputEnterHandler(event:FlexEvent):void
+			{
+				var sendObj:Array = null;
+				if(_obj_x == event.target)
+				{
+					sendObj = [0,int(_obj_x.text)];
+				}
+				else if(_obj_y == event.target)
+				{
+					sendObj = [1,int(_obj_y.text)];
+				}
+				else if(_obj_width == event.target)
+				{
+					sendObj = [2,int(_obj_width.text)];
+				}
+				else if(_obj_height == event.target)
+				{
+					sendObj = [3,int(_obj_height.text)];
+				}
+				sendMsg2swf(sendObj);
+			}
+			
+			//从该对象的父对象中remove该对象
+			private function onClickDeleteHandler():void
+			{
+				air2swfConn.send("_zhangji_1", "air2swfOperationCall","removeFromParent");
+			}
+			
+			//开启关闭编辑模式
+			private function onClickOnAndOffHandler():void
+			{
+				air2swfConn.send("_zhangji_1", "air2swfOperationCall",{"type":"isEidtiorModel","value":!isEditiorModel});
+			}
+			
+			//选择父容器
+			private function onClickChosedParentHandler():void
+			{
+				air2swfConn.send("_zhangji_1", "air2swfOperationCall","chosedParent");
+			}
+			
+			//不响应选择事件
+			private function onClickUnableHandler():void
+			{
+				air2swfConn.send("_zhangji_1", "air2swfOperationCall","unable");
+			}
+			
+			//开启拖放元件
+			private function onClickDragItHandler():void
+			{
+				air2swfConn.send("_zhangji_1", "air2swfOperationCall",{"type":"isDragModel","value":!isDragModel});
+			}
+			
+			//发送
+			private function sendMsg2swf(params:*):void
+			{
+				air2swfConn.send("_zhangji_1", "air2swfLocalCall",params);
+			}
+			
+			//swf2air调用的公开方法
+			public function swf2airLocalCall(params:Object):void
+			{
+				if(params!=null)
+				{
+					_className.text = String(params.className);
+					_obj_x.text = String(params.x);
+					_obj_y.text = String(params.y);
+					_obj_width.text = String(params.width);
+					_obj_height.text = String(params.height);
+				}
+			}
+			
+			public function swf2airOperationCall(params:Object):void
+			{
+				if(params != null)
+				{
+					var type:String = String(params.type);
+					if(type == "isEditior")//编辑模式开启关闭
+					{
+						isEditiorModel = Boolean(params.value);
+					}
+					else if(type == "isDrag")//拖拉方式
+					{
+						isDragModel = Boolean(params.value);
+					}
+				}
+			}
+			
+			
+		]]>
+	</mx:Script>
+	<mx:Label x="6" y="13" text="class:" toolTip="选中ui,用方向键操作"/>
+	<mx:TextInput id="_className" x="46" y="11" width="335" editable="false"/>
+	<mx:Label x="16" y="45" text="x:"/>
+	<mx:Label x="102" y="45" text="y:"/>
+	<mx:Label x="181" y="45" text="width:"/>
+	<mx:Label x="283" y="45" text="height:"/>
+	<mx:TextInput id="_obj_x" x="45" y="42" width="50" restrict="0-9" enter="onInputEnterHandler(event)"/>
+	<mx:TextInput id="_obj_y" x="122" y="42" width="50" restrict="0-9" enter="onInputEnterHandler(event)"/>
+	<mx:TextInput id="_obj_width" x="224" y="42" width="50" restrict="0-9" enter="onInputEnterHandler(event)"/>
+	<mx:TextInput id="_obj_height" x="331" y="42" width="50" restrict="0-9" enter="onInputEnterHandler(event)"/>
+	<mx:Button id="_deleteBtn" x="91" y="73" width="60" label="delete" click="onClickDeleteHandler()"/>
+	<mx:Button id="_onAndOffBtn" x="15" y="73" width="60" label="ON" click="onClickOnAndOffHandler()"/>
+	<mx:Button id="_parentBtn" x="168" y="73" width="60" label="parent" click="onClickChosedParentHandler()"/>
+	<mx:Button id="_unableBtn" x="241" y="73" width="69" label="unable" click="onClickUnableHandler()"/>
+	<mx:Button id="_dragBtn" x="322" y="73" width="60" label="drag" click="onClickDragItHandler()"/>
+</mx:WindowedApplication>
